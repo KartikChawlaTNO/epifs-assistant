@@ -1,0 +1,52 @@
+{
+  "name": "epifs-assistant-prototype",
+  "version": "1.0.0",
+  "description": "A React application that allows users to upload a document and receive automated answers to a questionnaire, with a clean user interface in the EPIFs Assistant style.",
+  "main": "src/main.tsx",
+  "scripts": {
+    "start": "craco start",
+    "build": "craco build",
+    "test": "craco test",
+    "eject": "react-scripts eject"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "typescript": "^4.9.5"
+  },
+  "devDependencies": {
+    "@craco/craco": "^7.1.0",
+    "@tailwindcss/postcss": "^4.2.2",
+    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^14.4.3",
+    "@types/jest": "^29.5.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "craco": "^0.0.3",
+    "postcss": "^8.5.8",
+    "react-scripts": "^5.0.1",
+    "tailwindcss": "^4.2.2"
+  },
+  "keywords": [
+    "react",
+    "form-fill",
+    "automation",
+    "epifs",
+    "assistant"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
