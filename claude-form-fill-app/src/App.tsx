@@ -1,23 +1,21 @@
 
 import React, { useState } from 'react';
 import FileUpload from './components/FileUpload';
-
-const annex3Questions = [
-    { question: 'Is Background (existing knowledge) of TNO required to achieve the TNO Results or do you (basically) start from scratch? If yes, please describe/specify the Background.', answer: '' },
-    { question: 'Does TNO have the required access rights to the needed Background? In other words: is TNO not limited to use and give access rights to its Background due to other contractual obligations (e.g. licenses)?', answer: '' },
-    { question: 'Do partners need access rights to TNO Background for the implementation of the Project?', answer: '' },
-    { question: 'Do partners need access rights to TNO Background to be able to use their Results after the Project?', answer: '' },
-    { question: 'Does TNO need access rights to Background or Results of partners for the implementation of the Project?', answer: '' },
-    { question: 'What will be the Results (in terms of IPR/Foreground) for TNO?', answer: '' },
-    { question: 'Do partners need access rights to the TNO Results to be able to use their Results of the project after the Project?', answer: '' },
-    { question: 'Will TNO realize the Results on its own or will other Partners also create and own part of these Results (resulting in Joint IP)? Please specify.', answer: '' },
-    { question: 'Will the TNO Results be able to operate on itself after the project or is access to Background or Results of other Partners necessary to be able to use these Results?', answer: '' },
-];
+import ErrorBoundary from './components/ErrorBoundary';
+import { ANNEX_3_QUESTIONS } from './constants/questions';
+import { Question, ProcessingState } from './types';
+import { analyseDocument } from './services/documentAnalysis';
 
 const App: React.FC = () => {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [answers, setAnswers] = useState(annex3Questions);
+    const [answers, setAnswers] = useState<Question[]>(ANNEX_3_QUESTIONS);
     const [openIndexes, setOpenIndexes] = useState<number[]>([]);
+    const [processingState, setProcessingState] = useState<ProcessingState>({
+        isProcessing: false,
+        error: null,
+        progress: 0,
+        successMessage: null
+    });
 
     const toggleOpen = (idx: number) => {
         setOpenIndexes((prev) =>
@@ -27,86 +25,168 @@ const App: React.FC = () => {
 
     const handleFileSelected = (file: File) => {
         setSelectedFile(file);
+        setProcessingState({ isProcessing: false, error: null, progress: 0, successMessage: null });
+        // Reset answers to empty
+        setAnswers(ANNEX_3_QUESTIONS);
+    };
+
+    const handleAnalyse = async () => {
+        if (!selectedFile) return;
+        
+        setProcessingState({ isProcessing: true, error: null, progress: 0, successMessage: null });
+        
+        try {
+            const result = await analyseDocument({
+                file: selectedFile,
+                questions: answers,
+                onProgress: (progress) => {
+                    setProcessingState(prev => ({ ...prev, progress }));
+                }
+            });
+            
+            setAnswers(result.answers);
+            setProcessingState({ 
+                isProcessing: false, 
+                error: null, 
+                progress: 100,
+                successMessage: 'Document analyzed successfully!'
+            });
+            
+            // Clear success message after 5 seconds
+            setTimeout(() => {
+                setProcessingState(prev => ({ ...prev, successMessage: null }));
+            }, 5000);
+        } catch (error) {
+            setProcessingState({ 
+                isProcessing: false, 
+                error: error instanceof Error ? error.message : 'Failed to process document. Please try again.',
+                progress: 0,
+                successMessage: null
+            });
+        }
     };
 
     return (
-        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#226eb1', color: '#e2e8f0', fontFamily: 'system-ui, sans-serif' }}>
-            <main style={{ flex: 1, display: 'flex', justifyContent: 'center', padding: '2rem 1rem' }}>
-                <div style={{ width: '100%', maxWidth: '600px' }}>
-                    {/* Header */}
-                    <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                        <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#000' }}>EPIFs Assistant</h1>
-                        <p style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Upload your document and get instant answers</p>
-                    </div>
-
-                    {/* Upload Card */}
-                    <div style={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '0.5rem', padding: '1.5rem', marginBottom: '1.5rem' }}>
-                        <FileUpload onFileSelected={handleFileSelected} selectedFile={selectedFile} setSelectedFile={setSelectedFile} />
-                        {selectedFile && (
-                            <button
-                                style={{
-                                    marginTop: '1rem',
-                                    width: '100%',
-                                    padding: '0.5rem',
-                                    backgroundColor: '#4f46e5',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '0.375rem',
-                                    cursor: 'pointer',
-                                    fontWeight: '500',
-                                    fontSize: '0.875rem'
-                                }}
-                            >
-                                Analyse
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Questions List - Always Visible */}
-                    <div>
-                        <h2 style={{ fontSize: '0.75rem', fontWeight: '600', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#111111', marginBottom: '1rem' }}>Annex 3 Questions</h2>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                            {answers.map((item, idx) => {
-                                const isOpen = openIndexes.includes(idx);
-                                return (
-                                    <div
-                                        key={idx}
-                                        style={{
-                                            backgroundColor: '#1e293b',
-                                            border: '1px solid #334155',
-                                            borderRadius: '0.375rem',
-                                            padding: '1rem',
-                                            cursor: 'pointer'
-                                        }}
-                                        onClick={() => toggleOpen(idx)}
-                                    >
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
-                                            <span style={{ fontSize: '0.875rem', flex: 1 }}>{item.question}</span>
-                                            <span style={{ color: '#4f46e5', fontSize: '1rem', flexShrink: 0 }}>{isOpen ? '−' : '+'}</span>
-                                        </div>
-                                        {isOpen && (
-                                            <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid #334155', fontSize: '0.875rem', color: '#cbd5e1' }}>
-                                                {selectedFile ? (item.answer || '(No answer)') : '(No answer)'}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
+        <ErrorBoundary>
+            <div className="min-h-screen flex flex-col bg-slate-900 text-slate-200 font-sans">
+                <main className="flex-1 flex justify-center p-8 px-4">
+                    <div className="w-full max-w-2xl">
+                        {/* Header */}
+                        <div className="text-center mb-8">
+                            <h1 className="text-2xl font-bold mb-2 text-white">EPIFs Assistant</h1>
+                            <p className="text-sm text-slate-400">Upload your document and get instant answers</p>
                         </div>
-                        {!selectedFile && (
-                            <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.875rem' }}>
-                                Upload a file above to see answers populated here
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </main>
 
-            {/* Footer */}
-            <footer style={{ textAlign: 'center', padding: '1rem', color: '#64748b', fontSize: '0.75rem', borderTop: '1px solid #334155' }}>
-                © {new Date().getFullYear()} EPIFs Assistant
-            </footer>
-        </div>
+                        {/* Upload Card */}
+                        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 mb-6">
+                            <FileUpload 
+                                onFileSelected={handleFileSelected} 
+                                selectedFile={selectedFile} 
+                                setSelectedFile={setSelectedFile} 
+                            />
+                            {selectedFile && (
+                                <>
+                                    <button
+                                        onClick={handleAnalyse}
+                                        disabled={processingState.isProcessing}
+                                        className="mt-4 w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white border-none rounded-md cursor-pointer font-medium text-sm transition-colors"
+                                        aria-label="Analyse document"
+                                    >
+                                        {processingState.isProcessing ? (
+                                            <span className="flex items-center justify-center gap-2">
+                                                <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" 
+                                                      role="status" 
+                                                      aria-label="Processing"></span>
+                                                Processing...
+                                            </span>
+                                        ) : (
+                                            'Analyse'
+                                        )}
+                                    </button>
+                                    
+                                    {/* Progress Bar */}
+                                    {processingState.isProcessing && (
+                                        <div className="mt-4">
+                                            <div className="flex justify-between text-xs text-slate-400 mb-1">
+                                                <span>Processing document</span>
+                                                <span>{processingState.progress}%</span>
+                                            </div>
+                                            <div className="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
+                                                <div 
+                                                    className="bg-indigo-600 h-full transition-all duration-300 ease-out"
+                                                    style={{ width: `${processingState.progress}%` }}
+                                                    role="progressbar"
+                                                    aria-valuenow={processingState.progress}
+                                                    aria-valuemin={0}
+                                                    aria-valuemax={100}
+                                                ></div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                            {processingState.error && (
+                                <div className="mt-4 p-3 bg-red-900/20 border border-red-800 rounded-md text-red-300 text-sm" role="alert">
+                                    <span className="font-semibold">Error: </span>{processingState.error}
+                                </div>
+                            )}
+                            {processingState.successMessage && (
+                                <div className="mt-4 p-3 bg-green-900/20 border border-green-800 rounded-md text-green-300 text-sm" role="alert">
+                                    <span className="font-semibold">✓ </span>{processingState.successMessage}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Questions List - Always Visible */}
+                        <div>
+                            <h2 className="text-xs font-semibold tracking-wider uppercase text-slate-300 mb-4">Annex 3 Questions</h2>
+                            <div className="flex flex-col gap-3">
+                                {answers.map((item, idx) => {
+                                    const isOpen = openIndexes.includes(idx);
+                                    return (
+                                        <div
+                                            key={idx}
+                                            className="bg-slate-800 border border-slate-700 rounded-md p-4 cursor-pointer hover:border-slate-600 transition-colors"
+                                            onClick={() => toggleOpen(idx)}
+                                            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleOpen(idx)}
+                                            role="button"
+                                            tabIndex={0}
+                                            aria-expanded={isOpen}
+                                            aria-label={`Question ${idx + 1}: ${item.question}`}
+                                        >
+                                            <div className="flex justify-between items-start gap-3">
+                                                <span className="text-sm flex-1">{item.question}</span>
+                                                <span 
+                                                    className="text-indigo-400 text-base flex-shrink-0 font-bold"
+                                                    aria-hidden="true"
+                                                >
+                                                    {isOpen ? '−' : '+'}
+                                                </span>
+                                            </div>
+                                            {isOpen && (
+                                                <div className="mt-3 pt-3 border-t border-slate-700 text-sm text-slate-300">
+                                                    {item.answer ? item.answer : <em className="text-slate-500">(No answer yet - upload and analyse a document)</em>}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            {!selectedFile && (
+                                <div className="p-8 text-center text-slate-500 text-sm">
+                                    Upload a file above to see answers populated here
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </main>
+
+                {/* Footer */}
+                <footer className="text-center py-4 text-slate-500 text-xs border-t border-slate-800">
+                    © {new Date().getFullYear()} EPIFs Assistant
+                </footer>
+            </div>
+        </ErrorBoundary>
     );
 }
 
